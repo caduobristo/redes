@@ -1,2 +1,2 @@
-# redes
-Repositório dedicado aos projetos da disciplina de redes
+# Trabalho 1 - UDP
+- Implementação de transferência de arquivos confiável sobre UDP com sockets
