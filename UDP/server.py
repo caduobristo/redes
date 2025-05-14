@@ -4,14 +4,26 @@ import os
 import hashlib
 import random
 
+'''
+GET /arquivo.ext: requisição de um arquivo pelo cliente.
+
+FILE_NOT_FOUND: resposta do servidor se o arquivo não existir.
+
+ACK <n>: confirmação de recebimento do pacote <n> por parte do cliente.
+
+EOF: enviado pelo servidor para sinalizar o fim da transmissão.
+
+PING/PONG: usados para validação da conexão entre cliente e servidor antes da transmissão.
+'''
+
 # Função para calcular o checksum SHA-256 truncado (4 bytes)
 def calculate_checksum(data):
     return hashlib.sha256(data).digest()[:4]
 
 IP = '0.0.0.0' 
-PORT = 5005 
+PORT = 2002 
 WINDOW_SIZE = 4
-TIMEOUT = 2
+TIMEOUT = 0.05
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind((IP, PORT))
@@ -22,7 +34,7 @@ print(f"[Servidor] Aguardando requisição na porta {PORT}...")
 # Loop principal para escutar requisições
 while True:
     try:
-        request, client_addr = sock.recvfrom(4096)
+        request, client_addr = sock.recvfrom(1024)
     except socket.timeout:
         continue
     
@@ -55,7 +67,7 @@ while True:
         packages = []
         seq_num = 0
         while True:
-            data = f.read(4084) # 4084 = 4096 - 4 (seq) - 8 (checksum)
+            data = f.read(1012) # 1012 = 1024 - 4 (seq) - 8 (checksum)
             if not data:
                 break
 

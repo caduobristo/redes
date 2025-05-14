@@ -8,7 +8,7 @@ def calculate_checksum(data):
     return hashlib.sha256(data).digest()[:4]
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock.settimeout(5)
+sock.settimeout(2)
 
 # Verifica a conexão com o servidor
 while True:
@@ -25,12 +25,15 @@ while True:
                 break
             else:
                 print("[Cliente] Servidor respondeu, mas com mensagem inesperada.")
-        except socket.timeout:
+        except e:
             print("[Cliente] Sem resposta do servidor. Verifique o IP/porta e tente novamente.")
             
     except ValueError:
         print("[Cliente] Entrada inválida, use o formato IP:PORTA")
         continue
+
+    except Exception as e:
+        print("[Cliente] Sem resposta do servidor. Verifique o IP/porta e tente novamente.")
 
 # Loop principal para enviar requisições
 while True:
@@ -57,7 +60,7 @@ while True:
         # Loop de recepção e verificação dos pacotes
         while True:
             try:
-                package, _ = sock.recvfrom(4096)
+                package, _ = sock.recvfrom(1024)
             except socket.timeout:
                 ack_lost_counter += 1
                 if ack_lost_counter > 3:
@@ -111,7 +114,6 @@ while True:
             with open(f"received_{file}", 'wb') as f:
                 for seq in sorted(received_data.keys()):
                     f.write(received_data[seq])
-                    print(f"[Cliente] Gravando pacote {seq}")
                 print(f"[Cliente] Arquivo salvo como received_{file}")
 
     except Exception as e:
