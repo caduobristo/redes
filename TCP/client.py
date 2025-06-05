@@ -1,9 +1,27 @@
 import socket
+import threading
+import sys
 
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock.settimeout(5) 
+running = True
 
-while True:
+def receive_thread(sock):
+    while True:
+        try:
+            message = sock.recv(1024).decode('utf-8')
+            if not message:
+                break
+            sys.stdout.write('\r' + ' ' * 60 + '\r')
+            print(message)
+            sys.stdout.write('[Você] ')
+            sys.stdout.flush()
+        except Exception as e:
+            if running:
+                print("\n[AVISO] Conexão com o servidor encerrada. Pressione Enter para sair.")
+            break
+
+def main():
+    global running
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         server_input = input("[Cliente] Digite o IP e porta do servidor: ").strip()
     
@@ -14,35 +32,36 @@ while True:
         sock.connect((SERVER_IP, SERVER_PORT))
         
         print("[Cliente] Conexão com o servidor estabelecida com sucesso!")
-        break
-
-    except ValueError:
-        print("[Cliente] Entrada inválida. Use o formato IP:PORTA.")
-    except socket.timeout:
-        print("[Cliente] A tentativa de conexão demorou demais.")
-    except ConnectionRefusedError:
-        print("[Cliente] Conexão recusada.")
-    except socket.gaierror:
-        print("[Cliente] O IP ou hostname é inválido.")
     except Exception as e:
-        print(f"[Cliente] Ocorreu um erro ao tentar conectar: {e}.")
+        print(f"[Cliente] Não foi possível conectar: {e}")
+        return
+    
+    receiver = threading.Thread(target=receive_thread, args=(sock,), daemon=True)
+    receiver.start()
 
-try:
-    sock.settimeout(None)
+    try:
+        while receiver.is_alive():
+            message = input('[Você] ')
+            if message.upper() == 'SAIR':
+                sock.sendall(message.encode('utf-8'))
+                break
 
-    message = "Olá, servidor! Tudo bem?"
-    sock.sendall(message.encode('utf-8'))
-    print(f"[Cliente] Mensagem enviada: {message}")
+            full_message = f"CHAT:{message}"
+            sock.sendall(full_message.encode('utf-8'))
+            
+    except (BrokenPipeError, ConnectionResetError):
+        print("[Cliente] A conexão com o servidor foi encerrada.")
+    except (EOFError, KeyboardInterrupt):
+        print("[Cliente] Desconectando...")
+        try:
+            sock.sendall(b'SAIR')
+        except:
+            pass
+        
+    finally:
+        running = False
+        print("[Cliente] Desconectando...")
+        sock.close()
 
-    received_data = sock.recv(1024)
-    server_message = received_data.decode('utf-8')
-
-    print(f"[Cliente] Resposta recebida: {server_message}")
-
-except socket.error as e:
-    print(f"[Cliente] Erro de socket durante a comunicação: {e}")
-except Exception as e:
-    print(f"[Cliente] Ocorreu um erro inesperado: {e}")
-finally:
-    print("[Cliente] Fechando socket.")
-    sock.close()
+if __name__ == "__main__":
+    main()
